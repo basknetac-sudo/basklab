@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BaskLab — Import / Restore</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #0a0e14; --surface: #111720; --card: #18202c; --border: #252f3e;
+  --accent: #e8651a; --accent2: #f97316; --green: #22c55e; --red: #ef4444;
+  --yellow: #eab308; --blue: #3b82f6; --text: #e8eef5; --muted: #6b7d93;
+  --radius: 12px; --font-d: 'Bebas Neue', sans-serif; --font-b: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-b); min-height: 100dvh; display: flex; align-items: flex-start; justify-content: center; padding: 20px; }
+
+.container { max-width: 780px; width: 100%; padding-bottom: 40px; }
+
+.header { text-align: center; margin-bottom: 32px; }
+.header h1 { font-family: var(--font-d); font-size: 48px; letter-spacing: 3px; }
+.header h1 span { color: var(--accent); }
+.header p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 20px; }
+.card-title { font-family: var(--font-d); font-size: 22px; letter-spacing: .5px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+
+.warning-box { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+.warning-box.yellow { background: rgba(234,179,8,.08); border: 1px solid rgba(234,179,8,.25); }
+.warning-box h3 { color: var(--red); font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.warning-box.yellow h3 { color: var(--yellow); }
+.warning-box ul { color: var(--muted); font-size: 13px; line-height: 1.8; padding-left: 20px; }
+
+.info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; flex-wrap: wrap; gap: 8px; }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--muted); font-weight: 600; }
+.info-value { color: var(--text); font-weight: 700; font-family: monospace; font-size: 13px; }
+
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 6px; }
+.field input { width: 100%; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; outline: none; transition: border-color .15s; font-family: var(--font-b); }
+.field input:focus { border-color: var(--accent); }
+.field input::placeholder { color: var(--muted); }
+.field .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 10px; font-family: var(--font-b); font-size: 15px; font-weight: 700; letter-spacing: .3px; cursor: pointer; border: none; transition: all .15s; user-select: none; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--accent); color: #fff; width: 100%; font-size: 16px; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); width: 100%; }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.3); width: 100%; }
+.btn-success { background: rgba(34,197,94,.12); color: var(--green); border: 1px solid rgba(34,197,94,.3); width: 100%; }
+
+.step-indicator { display: flex; gap: 8px; margin-bottom: 24px; }
+.step-dot { flex: 1; height: 4px; border-radius: 2px; background: var(--border); transition: background .3s; }
+.step-dot.active { background: var(--accent); }
+.step-dot.done { background: var(--green); }
+
+.step { display: none; }
+.step.active { display: block; }
+
+.file-drop { border: 2px dashed var(--border); border-radius: var(--radius); padding: 40px 20px; text-align: center; cursor: pointer; transition: all .15s; margin-bottom: 16px; }
+.file-drop:hover, .file-drop.dragover { border-color: var(--accent); background: rgba(232,101,26,.05); }
+.file-drop .drop-icon { font-size: 36px; margin-bottom: 12px; }
+.file-drop .drop-text { font-size: 14px; color: var(--muted); }
+.file-drop .drop-text strong { color: var(--text); }
+.file-drop input { display: none; }
+.file-drop.loaded { border-color: var(--green); background: rgba(34,197,94,.05); }
+.file-drop.loaded .drop-icon::after { content: " ✓"; color: var(--green); }
+
+.manifest-table { width: 100%; border-collapse: collapse; }
+.manifest-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.manifest-table td { font-size: 14px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.04); }
+.manifest-table .count { font-family: var(--font-d); font-size: 24px; color: var(--accent); }
+
+.checkbox-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; font-size: 14px; }
+.checkbox-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+
+.progress-area { margin-top: 20px; display: none; }
+.progress-bar-wrap { background: var(--card); border-radius: 20px; height: 8px; overflow: hidden; margin-bottom: 12px; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 20px; transition: width .3s ease; width: 0%; }
+.progress-text { font-size: 13px; color: var(--muted); text-align: center; }
+
+.log-area { margin-top: 20px; display: none; }
+.log-title { font-family: var(--font-d); font-size: 18px; letter-spacing: .5px; margin-bottom: 10px; color: var(--muted); }
+.log-list { max-height: 350px; overflow-y: auto; background: var(--card); border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+.log-list::-webkit-scrollbar { width: 4px; }
+.log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.log-entry { padding: 5px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); display: flex; align-items: flex-start; gap: 8px; }
+.log-entry:last-child { border-bottom: none; }
+.log-ok { color: var(--green); }
+.log-err { color: var(--red); }
+.log-info { color: var(--blue); }
+.log-warn { color: var(--yellow); }
+
+.result-box { border-radius: var(--radius); padding: 20px; margin-top: 20px; text-align: center; }
+.result-box.success { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); }
+.result-box.failure { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); }
+.result-box h3 { font-family: var(--font-d); font-size: 28px; letter-spacing: 1px; margin-bottom: 8px; }
+.result-box p { font-size: 14px; color: var(--muted); }
+
+.back-link { display: block; text-align: center; margin-top: 24px; color: var(--muted); font-size: 13px; text-decoration: none; }
+.back-link:hover { color: var(--accent); }
+.btn-row { display: flex; gap: 12px; margin-top: 16px; }
+.btn-row .btn { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>BASK<span>LAB</span> IMPORT</h1>
+    <p>Restore Backup to a New Firebase Project</p>
+  </div>
+
+  <div class="step-indicator">
+    <div class="step-dot active" id="dot-1"></div>
+    <div class="step-dot" id="dot-2"></div>
+    <div class="step-dot" id="dot-3"></div>
+    <div class="step-dot" id="dot-4"></div>
+  </div>
+
+  <!-- ════════════ STEP 1: Load Backup File ════════════ -->
+  <div class="step active" id="step-1">
+    <div class="card">
+      <div class="card-title">📂 Step 1 — Load Backup File</div>
+
+      <div class="file-drop" id="file-drop">
+        <div class="drop-icon">📄</div>
+        <div class="drop-text">
+          <strong>Click to select</strong> or drag & drop your<br>
+          <code>basklab_backup_*.json</code> file here
+        </div>
+        <input type="file" id="file-input" accept=".json" />
+      </div>
+
+      <div id="file-info" style="display:none;">
+        <div class="info-row">
+          <span class="info-label">File Name</span>
+          <span class="info-value" id="fi-name">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Source Project</span>
+          <span class="info-value" id="fi-source">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Export Timestamp</span>
+          <span class="info-value" id="fi-time">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Total Documents</span>
+          <span class="info-value" id="fi-total">—</span>
+        </div>
+      </div>
+
+      <div id="backup-manifest" style="display:none; margin-top:16px;">
+        <table class="manifest-table">
+          <thead><tr><th>Collection</th><th>Documents</th></tr></thead>
+          <tbody id="backup-manifest-body"></tbody>
+        </table>
+      </div>
+
+      <button class="btn btn-primary" id="step1-next" style="margin-top:16px; display:none;" onclick="goStep(2)">Continue →</button>
+    </div>
+  </div>
+
+  <!-- ════════════ STEP 2: Configure New Firebase ════════════ -->
+  <div class="step" id="step-2">
+    <div class="card">
+      <div class="card-title">🔧 Step 2 — Configure New Firebase Project</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">
+        Enter the Firebase configuration for your <strong>NEW</strong> project.
+        You can find these values in the Firebase Console → Project Settings → General → Your apps → Firebase SDK snippet.
+      </p>
+      <div class="field">
+        <label>API Key *</label>
+        <input type="text" id="cfg-apiKey" placeholder="AIzaSy..." />
+      </div>
+      <div class="field">
+        <label>Auth Domain *</label>
+        <input type="text" id="cfg-authDomain" placeholder="your-project.firebaseapp.com" />
+      </div>
+      <div class="field">
+        <label>Project ID *</label>
+        <input type="text" id="cfg-projectId" placeholder="your-project-id" />
+        <div class="hint" id="cfg-projectId-hint"></div>
+      </div>
+      <div class="field">
+        <label>Storage Bucket</label>
+        <input type="text" id="cfg-storageBucket" placeholder="your-project.appspot.com (optional)" />
+      </div>
+      <div class="field">
+        <label>Messaging Sender ID</label>
+        <input type="text" id="cfg-messagingSenderId" placeholder="(optional)" />
+      </div>
+      <div class="field">
+        <label>App ID *</label>
+        <input type="text" id="cfg-appId" placeholder="1:xxxx:web:xxxx" />
+      </div>
+
+      <div id="cfg-error" style="display:none; color:var(--red); font-size:13px; margin-bottom:12px; padding:10px; background:rgba(239,68,68,.08); border-radius:8px;"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+        <button class="btn btn-primary" onclick="validateConfig()">Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ STEP 3: Review & Confirm ════════════ -->
+  <div class="step" id="step-3">
+    <div class="card">
+      <div class="card-title">✅ Step 3 — Review & Confirm</div>
+
+      <div class="warning-box">
+        <h3>🛑 Safety Check</h3>
+        <ul>
+          <li>Data will be written to the <strong>NEW</strong> project below — NOT the original.</li>
+          <li>Existing documents in the target will NOT be deleted automatically.</li>
+          <li>Documents with matching IDs will be <strong>skipped</strong> unless you enable overwrite.</li>
+        </ul>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Source Project (backup from)</span>
+        <span class="info-value" id="rev-source">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Target Project (writing to)</span>
+        <span class="info-value" id="rev-target" style="color:var(--green);">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Total Documents to Restore</span>
+        <span class="info-value" id="rev-total">—</span>
+      </div>
+
+      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+        <div class="checkbox-row">
+          <input type="checkbox" id="opt-overwrite" />
+          <label for="opt-overwrite" style="cursor:pointer;">Overwrite existing documents in target (if IDs match)</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="opt-dryrun" checked />
+          <label for="opt-dryrun" style="cursor:pointer;"><strong>Dry-run mode</strong> — preview the import without writing any data</label>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+        <button class="btn btn-primary" id="start-import-btn" onclick="startImport()">🚀 Start Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ STEP 4: Import Progress & Results ════════════ -->
+  <div class="step" id="step-4">
+    <div class="card">
+      <div class="card-title" id="step4-title">📥 Step 4 — Importing…</div>
+
+      <div class="progress-area" id="import-progress" style="display:block;">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="import-bar"></div>
+        </div>
+        <div class="progress-text" id="import-text">Preparing…</div>
+      </div>
+
+      <div class="log-area" id="import-log-area" style="display:block;">
+        <div class="log-title">Import Log</div>
+        <div class="log-list" id="import-log"></div>
+      </div>
+
+      <div id="import-result" style="display:none;">
+        <div id="import-manifest" style="margin-top:16px;">
+          <table class="manifest-table">
+            <thead><tr><th>Collection</th><th>Written</th><th>Skipped</th><th>Failed</th></tr></thead>
+            <tbody id="import-manifest-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="btn-row" id="step4-actions" style="display:none;">
+        <button class="btn btn-ghost" onclick="location.reload()">↻ Start Over</button>
+        <button class="btn btn-primary" onclick="window.open('index.html','_blank')">Open BaskLab Clone →</button>
+      </div>
+    </div>
+  </div>
+
+  <a href="index.html" class="back-link">← Back to BaskLab</a>
+</div>
+
+<script type="module">
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, doc, getDoc, setDoc, writeBatch, Timestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const ORIGINAL_PROJECT_ID = "hoops-coach-a28a0";
+const IMPORT_ORDER = ["batches", "students", "attendance", "payments"];
+const BATCH_SIZE = 450; // stay under Firestore 500-write limit
+
+let backupData = null;
+let targetConfig = null;
+let targetDb = null;
+let targetApp = null;
+
+// ── Step navigation ──
+window.goStep = function(n) {
+  document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
+  document.getElementById(`step-${n}`).classList.add("active");
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.getElementById(`dot-${i}`);
+    dot.classList.toggle("active", i === n);
+    dot.classList.toggle("done", i < n);
+  }
+  if (n === 3) populateReview();
+};
+
+// ── Step 1: File loading ──
+const fileDrop = document.getElementById("file-drop");
+const fileInput = document.getElementById("file-input");
+
+fileDrop.addEventListener("click", () => fileInput.click());
+fileDrop.addEventListener("dragover", e => { e.preventDefault(); fileDrop.classList.add("dragover"); });
+fileDrop.addEventListener("dragleave", () => fileDrop.classList.remove("dragover"));
+fileDrop.addEventListener("drop", e => {
+  e.preventDefault();
+  fileDrop.classList.remove("dragover");
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  if (!file.name.endsWith(".json")) {
+    alert("Please select a .json backup file.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.__meta || parsed.__meta.format !== "basklab-backup-v1") {
+        alert("Invalid backup file. Expected format: basklab-backup-v1");
+        return;
+      }
+      backupData = parsed;
+      fileDrop.classList.add("loaded");
+      fileDrop.querySelector(".drop-text").innerHTML = `<strong style="color:var(--green);">✓ File loaded:</strong> ${file.name}`;
+
+      document.getElementById("file-info").style.display = "block";
+      document.getElementById("fi-name").textContent = file.name;
+      document.getElementById("fi-source").textContent = parsed.__meta.sourceProjectId;
+      document.getElementById("fi-time").textContent = parsed.__meta.exportTimestamp;
+      document.getElementById("fi-total").textContent = parsed.__meta.totalDocuments;
+
+      const tbody = document.getElementById("backup-manifest-body");
+      tbody.innerHTML = (parsed.__meta.collections || []).map(c =>
+        `<tr><td style="font-weight:700;">${c.collection}</td><td><span class="count">${c.count}</span></td></tr>`
+      ).join("");
+      document.getElementById("backup-manifest").style.display = "block";
+      document.getElementById("step1-next").style.display = "flex";
+    } catch (err) {
+      alert("Error parsing JSON: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Step 2: Firebase config validation ──
+window.validateConfig = function() {
+  const apiKey     = document.getElementById("cfg-apiKey").value.trim();
+  const authDomain = document.getElementById("cfg-authDomain").value.trim();
+  const projectId  = document.getElementById("cfg-projectId").value.trim();
+  const appId      = document.getElementById("cfg-appId").value.trim();
+  const storageBucket     = document.getElementById("cfg-storageBucket").value.trim();
+  const messagingSenderId = document.getElementById("cfg-messagingSenderId").value.trim();
+
+  const errorEl = document.getElementById("cfg-error");
+  const hintEl  = document.getElementById("cfg-projectId-hint");
+  errorEl.style.display = "none";
+  hintEl.textContent = "";
+
+  // Required field check
+  if (!apiKey || !authDomain || !projectId || !appId) {
+    errorEl.textContent = "API Key, Auth Domain, Project ID, and App ID are required.";
+    errorEl.style.display = "block";
+    return;
+  }
+
+  // Safety: refuse if target == original
+  if (projectId === ORIGINAL_PROJECT_ID) {
+    errorEl.innerHTML = `🛑 <strong>BLOCKED:</strong> The target Project ID "${projectId}" matches the ORIGINAL project. You must use a DIFFERENT Firebase project for the import.`;
+    errorEl.style.display = "block";
+    hintEl.textContent = "⚠️ This matches the original project!";
+    hintEl.style.color = "var(--red)";
+    return;
+  }
+
+  // Also check against backup source
+  if (backupData && projectId === backupData.__meta.sourceProjectId) {
+    errorEl.innerHTML = `🛑 <strong>BLOCKED:</strong> The target Project ID "${projectId}" matches the backup's source project. You must use a DIFFERENT Firebase project.`;
+    errorEl.style.display = "block";
+    return;
+  }
+
+  targetConfig = { apiKey, authDomain, projectId, appId };
+  if (storageBucket)     targetConfig.storageBucket = storageBucket;
+  if (messagingSenderId) targetConfig.messagingSenderId = messagingSenderId;
+
+  goStep(3);
+};
+
+// ── Step 3: Review ──
+function populateReview() {
+  if (!backupData || !targetConfig) return;
+  document.getElementById("rev-source").textContent = backupData.__meta.sourceProjectId;
+  document.getElementById("rev-target").textContent = targetConfig.projectId;
+  document.getElementById("rev-total").textContent = backupData.__meta.totalDocuments;
+}
+
+// ── Import logging ──
+function ilog(message, type = "info") {
+  const logList = document.getElementById("import-log");
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  const icon = type === "ok" ? "✅" : type === "err" ? "❌" : type === "warn" ? "⚠️" : "ℹ️";
+  entry.innerHTML = `<span class="log-${type}">${icon}</span> <span>${message}</span>`;
+  logList.appendChild(entry);
+  logList.scrollTop = logList.scrollHeight;
+}
+
+function setImportProgress(pct, text) {
+  document.getElementById("import-bar").style.width = pct + "%";
+  document.getElementById("import-text").textContent = text;
+}
+
+// ── Deserialize special types ──
+function deserializeValue(val) {
+  if (val === null || val === undefined) return val;
+  if (typeof val === "object" && val.__type === "Timestamp") {
+    return new Timestamp(val.seconds, val.nanoseconds);
+  }
+  if (typeof val === "object" && val.__type === "DocumentReference") {
+    return val.path; // Store as string path; can't create cross-project references
+  }
+  if (typeof val === "object" && val.__type === "GeoPoint") {
+    return val; // Keep as plain object
+  }
+  if (Array.isArray(val)) return val.map(deserializeValue);
+  if (typeof val === "object" && (val.constructor === Object || val.constructor === undefined)) {
+    const out = {};
+    for (const [k, v] of Object.entries(val)) out[k] = deserializeValue(v);
+    return out;
+  }
+  return val;
+}
+
+function deserializeDoc(docObj) {
+  const data = {};
+  for (const [k, v] of Object.entries(docObj)) {
+    if (k === "__docId" || k === "__path") continue;
+    data[k] = deserializeValue(v);
+  }
+  return data;
+}
+
+// ── Main import ──
+window.startImport = async function() {
+  if (!backupData || !targetConfig) return;
+
+  const dryRun    = document.getElementById("opt-dryrun").checked;
+  const overwrite = document.getElementById("opt-overwrite").checked;
+
+  goStep(4);
+
+  const titleEl = document.getElementById("step4-title");
+  titleEl.textContent = dryRun ? "📋 Step 4 — Dry Run Preview" : "📥 Step 4 — Importing…";
+
+  document.getElementById("import-log").innerHTML = "";
+
+  if (dryRun) {
+    ilog("DRY-RUN MODE — No data will be written.", "warn");
+  }
+
+  ilog(`Target project: ${targetConfig.projectId}`, "info");
+  ilog(`Source project: ${backupData.__meta.sourceProjectId}`, "info");
+  ilog(`Overwrite existing: ${overwrite ? "YES" : "NO"}`, "info");
+
+  // Initialize target Firebase
+  if (!dryRun) {
+    try {
+      if (targetApp) await deleteApp(targetApp);
+      targetApp = initializeApp(targetConfig, "import-target");
+      targetDb  = getFirestore(targetApp);
+      ilog("Connected to target Firebase project.", "ok");
+    } catch (err) {
+      ilog(`Failed to connect to target: ${err.message}`, "err");
+      document.getElementById("step4-actions").style.display = "flex";
+      return;
+    }
+  }
+
+  const results = {};
+  let totalWritten = 0, totalSkipped = 0, totalFailed = 0;
+
+  // Process collections in safe order
+  const collectionsToProcess = IMPORT_ORDER.filter(c => backupData.data[c] && backupData.data[c].length > 0);
+  // Add any collections in backup not in our known order
+  for (const c of Object.keys(backupData.data)) {
+    if (!collectionsToProcess.includes(c) && backupData.data[c].length > 0) {
+      collectionsToProcess.push(c);
+    }
+  }
+
+  const totalDocs = collectionsToProcess.reduce((sum, c) => sum + (backupData.data[c]?.length || 0), 0);
+  let processedDocs = 0;
+
+  for (const collName of collectionsToProcess) {
+    const docs = backupData.data[collName];
+    ilog(`Processing ${collName}: ${docs.length} document(s)…`, "info");
+    results[collName] = { written: 0, skipped: 0, failed: 0 };
+
+    if (dryRun) {
+      // Dry run: just count and validate
+      for (const docObj of docs) {
+        const docId = docObj.__docId;
+        if (!docId) {
+          results[collName].failed++;
+          ilog(`  [${collName}] Document missing __docId — would skip`, "warn");
+          continue;
+        }
+        results[collName].written++;
+        processedDocs++;
+      }
+      ilog(`  [${collName}] DRY-RUN: ${results[collName].written} would be written`, "ok");
+      setImportProgress(Math.round((processedDocs / totalDocs) * 100), `Preview: ${collName} (${processedDocs}/${totalDocs})`);
+      continue;
+    }
+
+    // Real import with batching
+    let batchDocs = [];
+    for (let i = 0; i < docs.length; i++) {
+      const docObj = docs[i];
+      const docId  = docObj.__docId;
+
+      if (!docId) {
+        results[collName].failed++;
+        totalFailed++;
+        ilog(`  [${collName}] Document at index ${i} missing __docId — skipped`, "err");
+        processedDocs++;
+        continue;
+      }
+
+      // Check if document already exists (when overwrite is off)
+      if (!overwrite) {
+        try {
+          const existingSnap = await getDoc(doc(targetDb, collName, docId));
+          if (existingSnap.exists()) {
+            results[collName].skipped++;
+            totalSkipped++;
+            processedDocs++;
+            setImportProgress(Math.round((processedDocs / totalDocs) * 100), `${collName}: ${processedDocs}/${totalDocs}`);
+            continue;
+          }
+        } catch (err) {
+          // If we can't check, proceed to write
+        }
+      }
+
+      batchDocs.push({ id: docId, data: deserializeDoc(docObj), collName });
+
+      // Flush batch when full or at end
+      if (batchDocs.length >= BATCH_SIZE || i === docs.length - 1) {
+        if (batchDocs.length > 0) {
+          try {
+            const batch = writeBatch(targetDb);
+            for (const bd of batchDocs) {
+              const ref = doc(targetDb, bd.collName, bd.id);
+              if (overwrite) {
+                batch.set(ref, bd.data);
+              } else {
+                batch.set(ref, bd.data);
+              }
+            }
+            await batch.commit();
+            results[collName].written += batchDocs.length;
+            totalWritten += batchDocs.length;
+          } catch (err) {
+            results[collName].failed += batchDocs.length;
+            totalFailed += batchDocs.length;
+            ilog(`  [${collName}] Batch write failed: ${err.message}`, "err");
+          }
+          processedDocs += batchDocs.length;
+          batchDocs = [];
+        }
+        setImportProgress(Math.round((processedDocs / totalDocs) * 100), `${collName}: ${processedDocs}/${totalDocs}`);
+      }
+    }
+
+    const r = results[collName];
+    const statusIcon = r.failed > 0 ? "⚠️" : "✅";
+    ilog(`  [${collName}] ${statusIcon} Written: ${r.written}, Skipped: ${r.skipped}, Failed: ${r.failed}`, r.failed > 0 ? "warn" : "ok");
+  }
+
+  // Show results
+  setImportProgress(100, dryRun ? "Dry run complete!" : "Import complete!");
+
+  const tbody = document.getElementById("import-manifest-body");
+  tbody.innerHTML = collectionsToProcess.map(c => {
+    const r = results[c] || { written: 0, skipped: 0, failed: 0 };
+    return `<tr>
+      <td style="font-weight:700;">${c}</td>
+      <td style="color:var(--green);font-weight:700;">${r.written}</td>
+      <td style="color:var(--yellow);font-weight:700;">${r.skipped}</td>
+      <td style="color:${r.failed > 0 ? 'var(--red)' : 'var(--muted)'};font-weight:700;">${r.failed}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("import-result").style.display = "block";
+
+  if (dryRun) {
+    ilog("DRY-RUN COMPLETE — No data was written. Uncheck dry-run and re-import to write data.", "warn");
+    titleEl.textContent = "📋 Dry Run Complete";
+  } else {
+    const allOk = totalFailed === 0;
+    titleEl.textContent = allOk ? "✅ Import Complete" : "⚠️ Import Completed with Errors";
+    ilog(`IMPORT COMPLETE — Written: ${totalWritten}, Skipped: ${totalSkipped}, Failed: ${totalFailed}`, allOk ? "ok" : "warn");
+  }
+
+  document.getElementById("step4-actions").style.display = "flex";
+};
+</script>
+
+</body>
+</html>

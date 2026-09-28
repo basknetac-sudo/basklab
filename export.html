@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BaskLab — Export Backup</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #0a0e14; --surface: #111720; --card: #18202c; --border: #252f3e;
+  --accent: #e8651a; --accent2: #f97316; --green: #22c55e; --red: #ef4444;
+  --yellow: #eab308; --blue: #3b82f6; --text: #e8eef5; --muted: #6b7d93;
+  --radius: 12px; --font-d: 'Bebas Neue', sans-serif; --font-b: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-b); min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+
+.container { max-width: 720px; width: 100%; }
+
+.header { text-align: center; margin-bottom: 32px; }
+.header h1 { font-family: var(--font-d); font-size: 48px; letter-spacing: 3px; }
+.header h1 span { color: var(--accent); }
+.header p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 20px; }
+.card-title { font-family: var(--font-d); font-size: 22px; letter-spacing: .5px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+
+.warning-box { background: rgba(234,179,8,.08); border: 1px solid rgba(234,179,8,.25); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+.warning-box h3 { color: var(--yellow); font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.warning-box ul { color: var(--muted); font-size: 13px; line-height: 1.8; padding-left: 20px; }
+
+.info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; flex-wrap: wrap; gap: 8px; }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--muted); font-weight: 600; }
+.info-value { color: var(--text); font-weight: 700; font-family: monospace; font-size: 13px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 10px; font-family: var(--font-b); font-size: 15px; font-weight: 700; letter-spacing: .3px; cursor: pointer; border: none; transition: all .15s; user-select: none; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--accent); color: #fff; width: 100%; font-size: 16px; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+.progress-area { margin-top: 20px; display: none; }
+.progress-bar-wrap { background: var(--card); border-radius: 20px; height: 8px; overflow: hidden; margin-bottom: 12px; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 20px; transition: width .3s ease; width: 0%; }
+.progress-text { font-size: 13px; color: var(--muted); text-align: center; }
+
+.log-area { margin-top: 20px; display: none; }
+.log-title { font-family: var(--font-d); font-size: 18px; letter-spacing: .5px; margin-bottom: 10px; color: var(--muted); }
+.log-list { max-height: 300px; overflow-y: auto; background: var(--card); border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+.log-list::-webkit-scrollbar { width: 4px; }
+.log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.log-entry { padding: 6px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); display: flex; align-items: flex-start; gap: 8px; }
+.log-entry:last-child { border-bottom: none; }
+.log-ok { color: var(--green); }
+.log-err { color: var(--red); }
+.log-info { color: var(--blue); }
+.log-warn { color: var(--yellow); }
+
+.manifest-area { margin-top: 20px; display: none; }
+.manifest-table { width: 100%; border-collapse: collapse; }
+.manifest-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.manifest-table td { font-size: 14px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.04); }
+.manifest-table .count { font-family: var(--font-d); font-size: 24px; color: var(--accent); }
+.status-ok { color: var(--green); font-weight: 700; }
+.status-fail { color: var(--red); font-weight: 700; }
+
+.back-link { display: block; text-align: center; margin-top: 24px; color: var(--muted); font-size: 13px; text-decoration: none; }
+.back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>BASK<span>LAB</span> EXPORT</h1>
+    <p>Application-Level Firestore Backup Tool</p>
+  </div>
+
+  <div class="warning-box">
+    <h3>⚠️ Important Notice</h3>
+    <ul>
+      <li>This is an <strong>application-level export</strong>, not a complete administrative Firestore backup.</li>
+      <li>Only data accessible through the app's existing authorized connection will be exported.</li>
+      <li>Collections or documents that require elevated permissions may be inaccessible.</li>
+      <li>Firestore server-side triggers, security rules, and indexes are NOT included.</li>
+      <li>No data will be modified, deleted, or written during export — this is <strong>read-only</strong>.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Source Project Info</div>
+    <div class="info-row">
+      <span class="info-label">Project ID</span>
+      <span class="info-value" id="project-id">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Collections to Export</span>
+      <span class="info-value">students, batches, attendance, payments</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Export Format</span>
+      <span class="info-value">JSON (with manifest)</span>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="export-btn" onclick="startExport()">
+    📦 Start Export Backup
+  </button>
+
+  <div class="progress-area" id="progress-area">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-text" id="progress-text">Preparing…</div>
+  </div>
+
+  <div class="log-area" id="log-area">
+    <div class="log-title">Export Log</div>
+    <div class="log-list" id="log-list"></div>
+  </div>
+
+  <div class="manifest-area" id="manifest-area">
+    <div class="card">
+      <div class="card-title">📊 Export Manifest</div>
+      <table class="manifest-table" id="manifest-table">
+        <thead>
+          <tr><th>Collection</th><th>Documents</th><th>Status</th></tr>
+        </thead>
+        <tbody id="manifest-body"></tbody>
+      </table>
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+        <div class="info-row">
+          <span class="info-label">Total Documents</span>
+          <span class="info-value" id="manifest-total">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Export Timestamp</span>
+          <span class="info-value" id="manifest-time">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Failures</span>
+          <span class="info-value" id="manifest-failures">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <a href="index.html" class="back-link">← Back to BaskLab</a>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ── ORIGINAL Firebase config (read-only access for export) ──
+const firebaseConfig = {
+  apiKey:            "AIzaSyD2lilDg3mdzr-ANtjxaaZx34fE4VUaXa8",
+  authDomain:        "hoops-coach-a28a0.firebaseapp.com",
+  projectId:         "hoops-coach-a28a0",
+  storageBucket:     "hoops-coach-a28a0.firebasestorage.app",
+  messagingSenderId: "144076262818",
+  appId:             "1:144076262818:web:a97c1febe31e60f79736fb"
+};
+
+const ORIGINAL_PROJECT_ID = firebaseConfig.projectId;
+const COLLECTIONS_TO_EXPORT = ["students", "batches", "attendance", "payments"];
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+document.getElementById("project-id").textContent = ORIGINAL_PROJECT_ID;
+
+// ── Logging (never logs student personal data) ──
+function addLog(message, type = "info") {
+  const logList = document.getElementById("log-list");
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  const icon = type === "ok" ? "✅" : type === "err" ? "❌" : type === "warn" ? "⚠️" : "ℹ️";
+  entry.innerHTML = `<span class="log-${type}">${icon}</span> <span>${message}</span>`;
+  logList.appendChild(entry);
+  logList.scrollTop = logList.scrollHeight;
+}
+
+function setProgress(pct, text) {
+  document.getElementById("progress-bar").style.width = pct + "%";
+  document.getElementById("progress-text").textContent = text;
+}
+
+// ── Serialize Firestore data (handles Timestamps, nested objects, arrays) ──
+function serializeValue(val) {
+  if (val === null || val === undefined) return val;
+  // Firestore Timestamp
+  if (val && typeof val === "object" && typeof val.seconds === "number" && typeof val.nanoseconds === "number" && typeof val.toDate === "function") {
+    return { __type: "Timestamp", seconds: val.seconds, nanoseconds: val.nanoseconds };
+  }
+  // Firestore DocumentReference
+  if (val && typeof val === "object" && val.path && typeof val.firestore === "object") {
+    return { __type: "DocumentReference", path: val.path };
+  }
+  // Firestore GeoPoint
+  if (val && typeof val === "object" && typeof val.latitude === "number" && typeof val.longitude === "number" && val.constructor?.name === "GeoPoint") {
+    return { __type: "GeoPoint", latitude: val.latitude, longitude: val.longitude };
+  }
+  // Array
+  if (Array.isArray(val)) return val.map(serializeValue);
+  // Plain object (nested map)
+  if (typeof val === "object" && (val.constructor === Object || val.constructor === undefined)) {
+    const out = {};
+    for (const [k, v] of Object.entries(val)) out[k] = serializeValue(v);
+    return out;
+  }
+  return val;
+}
+
+function serializeDoc(docData) {
+  const out = {};
+  for (const [k, v] of Object.entries(docData)) {
+    out[k] = serializeValue(v);
+  }
+  return out;
+}
+
+// ── Export a single collection ──
+async function exportCollection(collName) {
+  const snap = await getDocs(collection(db, collName));
+  const docs = [];
+  snap.docs.forEach(d => {
+    docs.push({
+      __docId: d.id,
+      __path: `${collName}/${d.id}`,
+      ...serializeDoc(d.data())
+    });
+  });
+  return docs;
+}
+
+// ── Main export function (requires explicit user action) ──
+window.startExport = async function() {
+  const btn = document.getElementById("export-btn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Exporting…";
+
+  document.getElementById("progress-area").style.display = "block";
+  document.getElementById("log-area").style.display = "block";
+  document.getElementById("log-list").innerHTML = "";
+  document.getElementById("manifest-area").style.display = "none";
+
+  const exportTimestamp = new Date().toISOString();
+  const backup = {
+    __meta: {
+      format: "basklab-backup-v1",
+      exportTimestamp,
+      sourceProjectId: ORIGINAL_PROJECT_ID,
+      exportType: "application-level",
+      warning: "This is an application-level export. It may not include all data if Firestore security rules restrict access. Firestore indexes, security rules, Cloud Functions, and other project-level settings are NOT included.",
+      collections: [],
+      totalDocuments: 0,
+      failures: []
+    },
+    data: {}
+  };
+
+  const manifest = [];
+  let totalDocs = 0;
+  let totalFailures = 0;
+
+  addLog(`Starting export from project: ${ORIGINAL_PROJECT_ID}`, "info");
+  addLog(`Collections to export: ${COLLECTIONS_TO_EXPORT.join(", ")}`, "info");
+  setProgress(5, "Starting export…");
+
+  for (let i = 0; i < COLLECTIONS_TO_EXPORT.length; i++) {
+    const collName = COLLECTIONS_TO_EXPORT[i];
+    const pctBase = 10 + ((i + 1) / COLLECTIONS_TO_EXPORT.length) * 80;
+    setProgress(Math.round(pctBase * 0.5 + 5), `Reading ${collName}…`);
+    addLog(`Reading collection: ${collName}…`, "info");
+
+    try {
+      const docs = await exportCollection(collName);
+      backup.data[collName] = docs;
+      totalDocs += docs.length;
+      manifest.push({ collection: collName, count: docs.length, status: "success", error: null });
+      addLog(`${collName}: ${docs.length} document(s) exported successfully`, "ok");
+    } catch (err) {
+      const errorMsg = err.message || String(err);
+      manifest.push({ collection: collName, count: 0, status: "failed", error: errorMsg });
+      backup.data[collName] = [];
+      backup.__meta.failures.push({ collection: collName, error: errorMsg });
+      totalFailures++;
+      addLog(`${collName}: FAILED — ${errorMsg}`, "err");
+    }
+
+    setProgress(Math.round(10 + ((i + 1) / COLLECTIONS_TO_EXPORT.length) * 80), `Finished ${collName}`);
+  }
+
+  backup.__meta.collections = manifest;
+  backup.__meta.totalDocuments = totalDocs;
+
+  setProgress(95, "Generating backup file…");
+  addLog("Building JSON backup file…", "info");
+
+  // Generate downloadable JSON
+  try {
+    const jsonStr = JSON.stringify(backup, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dateSlug = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
+    a.href = url;
+    a.download = `basklab_backup_${dateSlug}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    addLog(`Backup file downloaded: basklab_backup_${dateSlug}.json (${(jsonStr.length / 1024).toFixed(1)} KB)`, "ok");
+  } catch (err) {
+    addLog(`Error generating file: ${err.message}`, "err");
+    totalFailures++;
+  }
+
+  // Show manifest
+  setProgress(100, "Export complete!");
+  document.getElementById("manifest-area").style.display = "block";
+  const tbody = document.getElementById("manifest-body");
+  tbody.innerHTML = manifest.map(m => `
+    <tr>
+      <td style="font-weight:700;">${m.collection}</td>
+      <td><span class="count">${m.count}</span></td>
+      <td><span class="${m.status === 'success' ? 'status-ok' : 'status-fail'}">${m.status === 'success' ? '✅ Success' : '❌ Failed'}</span>
+        ${m.error ? `<div style="font-size:11px;color:var(--red);margin-top:4px;">${m.error}</div>` : ""}
+      </td>
+    </tr>
+  `).join("");
+
+  document.getElementById("manifest-total").textContent = totalDocs;
+  document.getElementById("manifest-time").textContent = exportTimestamp;
+  const failEl = document.getElementById("manifest-failures");
+  failEl.textContent = totalFailures === 0
+    ? "0 — All collections exported successfully"
+    : `${totalFailures} collection(s) failed`;
+  failEl.style.color = totalFailures > 0 ? "var(--red)" : "var(--green)";
+
+  if (totalFailures > 0) {
+    addLog(`Export completed with ${totalFailures} failure(s). Review the manifest above.`, "warn");
+  } else {
+    addLog(`Export completed successfully! ${totalDocs} total documents across ${COLLECTIONS_TO_EXPORT.length} collections.`, "ok");
+  }
+
+  btn.textContent = "📦 Export Again";
+  btn.disabled = false;
+};
+</script>
+
+</body>
+</html>

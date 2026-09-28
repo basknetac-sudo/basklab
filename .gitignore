@@ -1,0 +1,21 @@
+# BaskLab Clone — Git Ignore
+# Never commit real Firebase credentials
+
+# Environment files with real values
+.env
+.env.local
+.env.production
+
+# Firebase config with real credentials
+firebase-config.js
+
+# Firebase service account keys
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
+
+# Backup files containing student data
+basklab_backup_*.json
+
+# OS files
+.DS_Store
+Thumbs.db
