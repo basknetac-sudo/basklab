@@ -856,6 +856,7 @@ function toast(msg, type = "") {
 // ── PAYMENT STATUS LOGIC ──────────────────────────────────────────────────────
 function getEffectivePayStatus(s) {
   if (s.paymentStatus === "paid")         return "paid";
+  if (s.paymentStatus === "unpaid")       return "unpaid";
   if (s.paymentStatus === "onhold")       return "onhold";
   if (s.paymentStatus === "discontinued") return "discontinued";
   // Auto-derive: expired plan = unpaid, active/warning = paid
@@ -1956,7 +1957,7 @@ document.getElementById("save-student-btn").addEventListener("click", async () =
     plan.sessionsUsed  = editingStudentId ? (students.find(s => s.id === editingStudentId)?.plan?.sessionsUsed || 0) : 0;
   }
 
-  const payStatusToSave = (currentPayStatus === "unpaid") ? null : currentPayStatus;
+  const payStatusToSave = currentPayStatus;
 
   const data = { name, phone, plan, batchId, paymentStatus: payStatusToSave };
   if (age) data.age = parseInt(age);
@@ -2027,7 +2028,7 @@ document.getElementById("save-plan-btn").addEventListener("click", async () => {
     plan.endDate       = document.getElementById("ep-end").value || null;
   }
 
-  const payStatusToSave = planPayStatus === "unpaid" ? null : planPayStatus;
+  const payStatusToSave = planPayStatus;
 
   try {
     await updateDoc(doc(db, "students", planTargetId), { plan, paymentStatus: payStatusToSave });
