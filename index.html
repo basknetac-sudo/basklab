@@ -768,7 +768,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getFirestore, collection, doc,
   getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, query, where, orderBy, serverTimestamp
+  onSnapshot, query, where, orderBy, serverTimestamp,
+  enableIndexedDbPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ── Firebase config loaded from separate file ──
@@ -792,6 +793,12 @@ if (!firebaseConfig.projectId || !firebaseConfig.apiKey) {
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+
+try {
+  enableIndexedDbPersistence(db).catch(err => console.warn("Persistence error:", err));
+} catch (e) {
+  console.warn("Could not enable persistence:", e);
+}
 
 const LOGO_SRC = "logo.png";
 document.querySelectorAll('#sidebar-logo-img, #mobile-logo-img').forEach(el => { el.src = LOGO_SRC; });
