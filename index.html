@@ -479,7 +479,7 @@ input,select,textarea{font-family:inherit;}
         </div>
       </div>
       <!-- Row 2: payment status + batches -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:28px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;">
         <div class="stat-card green-top">
           <div class="num" id="stat-paid" style="color:var(--green);">—</div>
           <div class="lbl">Paid</div>
@@ -491,10 +491,6 @@ input,select,textarea{font-family:inherit;}
         <div class="stat-card blue-top">
           <div class="num" id="stat-onhold" style="color:var(--blue);">—</div>
           <div class="lbl">On Hold</div>
-        </div>
-        <div class="stat-card grey-top">
-          <div class="num" id="stat-discontinued" style="color:#a0aec0;">—</div>
-          <div class="lbl">Discontinued</div>
         </div>
         <div class="stat-card yellow-top">
           <div class="num" id="stat-batches" style="color:var(--yellow);">—</div>
@@ -589,7 +585,6 @@ input,select,textarea{font-family:inherit;}
         <button class="filter-chip" data-pay-filter="paid">Paid</button>
         <button class="filter-chip" data-pay-filter="unpaid">Unpaid (Expired)</button>
         <button class="filter-chip" data-pay-filter="onhold">On Hold</button>
-        <button class="filter-chip" data-pay-filter="discontinued">Discontinued</button>
       </div>
       <div id="payments-list">
         <div class="empty-state"><div class="big-icon">💰</div><p>No students found.</p></div>
@@ -1080,13 +1075,11 @@ function renderDashboard() {
   document.getElementById("stat-paid").textContent         = students.filter(s => getEffectivePayStatus(s) === "paid").length;
   document.getElementById("stat-unpaid").textContent       = students.filter(s => getEffectivePayStatus(s) === "unpaid").length;
   document.getElementById("stat-onhold").textContent       = students.filter(s => getEffectivePayStatus(s) === "onhold").length;
-  document.getElementById("stat-discontinued").textContent = students.filter(s => getEffectivePayStatus(s) === "discontinued").length;
 
   // Alerts
-  const discontinuedStudents = students.filter(s => isDiscontinued(s));
   const onHoldStudents       = students.filter(s => isOnHold(s) && !isDiscontinued(s));
   const expiredOrWarning     = students.filter(s => (isWarning(s) || isExpired(s)) && !isOnHold(s) && !isDiscontinued(s));
-  const alerts               = [...expiredOrWarning, ...onHoldStudents, ...discontinuedStudents];
+  const alerts               = [...expiredOrWarning, ...onHoldStudents];
 
   const box = document.getElementById("alerts-list");
   if (!alerts.length) {
@@ -1137,6 +1130,7 @@ function getBatchName(batchId) {
 
 function renderStudents() {
   let list = students;
+  if (studentFilter !== "discontinued") list = list.filter(s => getEffectivePayStatus(s) !== "discontinued");
   if (studentFilter === "active")       list = list.filter(s => !isExpired(s) && !isDiscontinued(s));
   if (studentFilter === "expired")      list = list.filter(s => isExpired(s) && !isDiscontinued(s));
   if (studentFilter === "paid")         list = list.filter(s => getEffectivePayStatus(s) === "paid");
@@ -1454,7 +1448,7 @@ function renderBatches() {
 
   let html = '<div class="batch-grid">';
   batches.forEach(b => {
-    const members      = students.filter(s => s.batchId === b.id);
+    const members      = students.filter(s => s.batchId === b.id && getEffectivePayStatus(s) !== "discontinued");
     const activeCount  = members.filter(s => !isExpired(s)).length;
     const expiredCount = members.filter(s => isExpired(s)).length;
     const todayPresent = members.filter(s => attendanceMap[s.id] === "present").length;
@@ -1525,7 +1519,7 @@ function renderBatches() {
       const isOpen = list.style.display !== "none";
       list.style.display = isOpen ? "none" : "flex";
       list.style.flexDirection = "column";
-      const count = students.filter(s => s.batchId === bid).length;
+      const count = students.filter(s => s.batchId === bid && getEffectivePayStatus(s) !== "discontinued").length;
       btn.textContent = isOpen ? `▼ Show Students (${count})` : `▲ Hide Students`;
     });
   });
@@ -1571,9 +1565,9 @@ function renderAttendance() {
   const absentCount   = Object.values(attendanceMap).filter(v => v === "absent").length;
   document.getElementById("att-count-badge").textContent = `${presentCount} Present`;
 
-  let displayStudents = students;
+  let displayStudents = students.filter(s => getEffectivePayStatus(s) !== "discontinued");
   if (attBatchFilter !== "all") {
-    displayStudents = students.filter(s => s.batchId === attBatchFilter);
+    displayStudents = displayStudents.filter(s => s.batchId === attBatchFilter);
   }
   const notMarkedCount = displayStudents.filter(s => !attendanceMap[s.id] && !isExpired(s)).length;
 
@@ -1745,11 +1739,10 @@ function renderPayments() {
     <span class="att-summary-chip nm-chip" style="font-size:12px;">📊 All-time: Qr ${totalEarned.toLocaleString("en-IN")}</span>
   `;
 
-  let list = [...students].sort((a,b) => a.name.localeCompare(b.name));
+  let list = [...students].filter(s => getEffectivePayStatus(s) !== "discontinued").sort((a,b) => a.name.localeCompare(b.name));
   if (payFilter === "paid")         list = list.filter(s => getEffectivePayStatus(s) === "paid");
   if (payFilter === "unpaid")       list = list.filter(s => getEffectivePayStatus(s) === "unpaid");
   if (payFilter === "onhold")       list = list.filter(s => getEffectivePayStatus(s) === "onhold");
-  if (payFilter === "discontinued") list = list.filter(s => getEffectivePayStatus(s) === "discontinued");
 
   const box = document.getElementById("payments-list");
   if (!list.length) {
